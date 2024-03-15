@@ -1,6 +1,11 @@
 // This tool collects all possible forks from a github repository and tries to add all of them as
 // remote endpoints to the current repository.
 
+use chrono::{
+    Local,
+    LocalResult,
+    TimeZone,
+};
 use clap::Parser;
 use git2;
 use octorust::{
@@ -48,6 +53,14 @@ struct Args {
     /// At which point the listing or adding of remotes is started
     #[clap(long, default_value = "1")]
     page: u16,
+
+    /// View current rate limit status
+    ///
+    /// Output of this option is the current rate limit status of the github api.
+    /// Example:
+    /// rate-limit:1/5000 available:4999 reset-at:Fri, 15 Mar 2024 13:33:52 +0100
+    #[clap(long, default_value = "false", verbatim_doc_comment)]
+    rate_limit: bool,
 
     /// Github token for authentication
     #[clap(short, long, env="GITHUB_TOKEN")]
@@ -99,6 +112,35 @@ async fn main() {
     let owner_repo = OwnerRepo::new(&args.repository).expect("Invalid repository format: gh standartformat is <owner>/<repo>");
 
     let client = Client::new("myAgent", to_credential(args.token)).expect("Failed to create gh client");
+
+    if args.rate_limit {
+        let rate_limit = match client.rate_limit().get().await {
+            Ok(response) => {
+                if response.status == StatusCode::OK {
+                    response.body
+                } else {
+                    panic!("Response Status not okay: {}", response.status);
+                }
+            },
+            Err(e) => {
+                println!("Error: {}", e);
+                exit(1);
+            }
+        };
+        // let x = Local.timestamp_opt(rate_limit.rate.reset, 0);
+        let dt = match Local.timestamp_opt(rate_limit.rate.reset, 0) {
+            // Some problems, just give the number back as string
+            LocalResult::None => rate_limit.rate.reset.to_string(),
+            LocalResult::Ambiguous(_, _) => rate_limit.rate.reset.to_string(),
+            // Clearly identifiable time. Format as rfc2822
+            LocalResult::Single(dt) => dt.to_rfc2822(),
+        };
+        println!("rate-limit:{}/{} available:{} reset-at:{}",
+            rate_limit.rate.used,
+            rate_limit.rate.limit,
+            rate_limit.rate.remaining,
+            dt);
+    }
 
     let forks = match client.repos().list_forks(&owner_repo.owner, &owner_repo.repo, ReposListForksSort::Newest, args.per_page as i64, args.page as i64 ).await {
         Ok(response) => {

@@ -7,7 +7,7 @@
 * [x] **0.1.1** `rgf <repo> --add`
   add a fork: Add a fork to a repository.
 
-* [ ] View rate limits: Show the rate limits of the GitHub API.
+* [x] **0.1.2**: View rate limits: Show the rate limits of the GitHub API.
   Not a local-fork manipulation usage but for general information.
 
 * [ ] Conceptual: Be in a repository / Not in a repository?

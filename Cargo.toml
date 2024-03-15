@@ -1,11 +1,12 @@
 [package]
 name = "rust-gh-forks"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+chrono = { version = "0.4.35", features = ["clock"] }
 clap = { version = "4.5.2", features = ["derive", "unicode", "wrap_help", "env"] }
 git2 = "0.18.2"
 octorust = "0.7.0"
