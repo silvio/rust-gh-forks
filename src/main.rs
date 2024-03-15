@@ -2,6 +2,7 @@
 // remote endpoints to the current repository.
 
 use clap::Parser;
+use git2;
 use octorust::{
     types::ReposListForksSort,
     Client,
@@ -15,6 +16,15 @@ use std::process::exit;
 #[command(about = "Add all forks of a github repository as remotes to the current repository")]
 struct Args {
     // Options
+
+    /// Do everything except actually add the remotes
+    #[clap(short, long)]
+    dry_run: bool,
+
+
+    /// Add the forks to current repository as remotes
+    #[clap(short, long, default_value = "false")]
+    add: bool,
 
     /// Only list the forks, but do not add them as remotes. Sort order is newest first
     ///
@@ -76,6 +86,12 @@ fn to_credential(tok: Option<String>) -> Option<octorust::auth::Credentials> {
     }
 }
 
+fn unify_remote_name(name: &String) -> String {
+    let mut out: String = name.clone();
+    out.insert_str(0, "rgf__");
+    out.replace("/", "_")
+}
+
 #[tokio::main]
 async fn main() {
     let args: Args = Args::parse();
@@ -103,4 +119,36 @@ async fn main() {
             println!("{} | {}", fork.full_name, fork.forks_count);
         }
     }
+
+    if args.add {
+        let repo = match git2::Repository::discover(".") {
+            Ok(repo) => repo,
+            Err(e) => panic!("Failed to open repository: {}", e),
+        };
+
+        let current_remotes = match repo.remotes() {
+            Ok(remotes) => remotes,
+            Err(e) => panic!("Failed to get remotes: {}", e),
+        };
+
+        for fork in forks {
+            let remote_name = unify_remote_name(&fork.full_name);
+
+            if current_remotes.iter().any(|r| r.unwrap() == remote_name) {
+                println!("= {}", remote_name);
+                continue;
+            }
+
+            if args.dry_run {
+                println!("(+) {}", remote_name);
+                continue;
+            } else {
+                match repo.remote(&remote_name, &fork.clone_url) {
+                    Ok(_) => println!("Remote {} added", remote_name),
+                    Err(e) => println!("Failed to add remote {}: {}", remote_name, e),
+                }
+            }
+        }
+    }
+
 }

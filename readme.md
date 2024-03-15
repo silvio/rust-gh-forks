@@ -4,7 +4,8 @@
 * [x] **0.1.0** `rgf <repo> --list`
   list all forks: List all forks of a repository.
 
-* [ ] add a fork: Add a fork to a repository.
+* [x] **0.1.1** `rgf <repo> --add`
+  add a fork: Add a fork to a repository.
 
 * [ ] View rate limits: Show the rate limits of the GitHub API.
   Not a local-fork manipulation usage but for general information.
